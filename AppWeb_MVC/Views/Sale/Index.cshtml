@@ -1,0 +1,170 @@
+﻿@model AppWeb_MVC.Models.Sale
+
+@{
+    ViewBag.Title = "Reservación de hotel";
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="~/Content/styles.css">
+</head>
+<body>
+    <div class="form-container">
+        <h2>Reserva de Hotel</h2>
+
+        @if (ViewBag.ErrorMessage != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error!</strong><p>@ViewBag.ErrorMessage</p>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (ViewBag.Message != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <strong>Ccompletado!</strong><p>@ViewBag.Message</p>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @using (Html.BeginForm("Create", "Sale", FormMethod.Post))
+        {
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+            <label for="customerName">Nombre completo:</label>
+            @Html.TextBoxFor(m => m.customerName
+            , new { @type = "text", @class = "form-control", @Value = Model.customerName })
+
+            <label for="hotelId">Seleccione su hotel:</label>
+            @Html.DropDownListFor(m => m.hotelId, new SelectList(Model.hotels, "Id", "Name"),
+           "Elije un hotel", new { @class = "form-control", @Value = Model.hotelId })
+
+            <label for="roomTypeId">Seleccione su habitación:</label>
+            @Html.DropDownListFor(m => m.roomTypeId, new SelectList(Model.roomTypes, "Id", "Name"),
+           "Elije una habitación", new { @class = "form-control", @Value = Model.roomTypeId })
+
+            <label for="arrivalDate">Seleccione la fecha de su llegada:</label>
+            @Html.TextBoxFor(m => m.arrivalDate, new
+            {
+                @type = "date",
+                min = DateTime.Now.ToString("yyyy-MM-dd"),
+            @class = "form-control",
+                @Value = Model.arrivalDate.ToString("yyyy-MM-dd")
+            })
+
+            <label for="departureDate">Seleccione la fecha de su salida:</label>
+            @Html.TextBoxFor(m => m.departureDate, new
+            {
+                @type = "date",
+                min = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd"),
+            @class = "form-control",
+                @Value = Model.departureDate.ToString("yyyy-MM-dd")
+            })
+
+            <!-- Selección de número de adultos -->
+            <label for="adultTotal">Seleccione cuántos adultos:</label>
+            @Html.TextBoxFor(m => m.adultTotal, new
+            {
+                @type = "number",
+                min = "1",
+                max = "10",
+                @class = "form-control"
+           ,
+                @Value = Model.adultTotal
+            })
+
+            <!-- Selección de número de menores -->
+            <label for="childTotal">Seleccione cuántos menores:</label>
+            @Html.TextBoxFor(m => m.childTotal, new
+            {
+                @type = "number",
+                min = "0",
+                max = "10",
+                @class = "form-control"
+            ,
+                @Value = Model.childTotal
+            })
+
+            <!-- Botón para guardar -->
+            <button type="submit" class="btn btn-primary">Reservar</button>
+
+            if (Model.total > 0)
+            {
+                <div id="priceDisplay">
+                    <p>Precio total: $<span id="total">@Model.total</span></p>
+                </div>
+            }
+            else
+            {
+                <div id="priceDisplay">
+                    <p>Precio total: $<span id="total">0.00</span></p>
+                </div>
+            }
+
+            <!-- Campo oculto para el total -->
+            @Html.HiddenFor(m => m.total)
+
+        }
+
+        <!-- Mostrar precio calculado -->
+        <!--@if (Model.total > 0)
+    {
+        <div id="priceDisplay">
+            <p>Precio total: $@Model.total</p>
+        </div>
+    }-->
+    </div>
+    <script>
+        // Datos de precios para cada combinación de hotel y tipo de habitación
+        const roomPrices = {
+            @foreach (var price in Model.roomPrice)
+            {
+                // Formato clave: {hotelId}_{roomTypeId}
+                //@: [`${price.Hotel_id}_${price.Room_Type_id}`]: @price.Price,
+                <text>"@(price.Hotel_id)_@(price.Room_Type_id)": @price.Price,</text>
+                //`${@price.Hotel_id}_${@price.Room_Type_id}`:@prie.Price,
+            }
+        };
+        // Función para calcular el precio total
+        function calculatePrice() {
+            const hotelId = document.getElementById("hotelId").value;
+            const roomTypeId = document.getElementById("roomTypeId").value;
+            const adults = parseInt(document.getElementById("adultTotal").value) || 0;
+            const children = parseInt(document.getElementById("childTotal").value) || 0;
+            const arrivalDate = new Date(document.getElementById("arrivalDate").value);
+            const departureDate = new Date(document.getElementById("departureDate").value);
+            const diferentDate = ((departureDate - arrivalDate) / (1000 * 60 * 60 * 24));
+            console.log(arrivalDate);
+            console.log(departureDate);
+            console.log((diferentDate));
+            // Concatenamos hotelId y roomTypeId para obtener la clave
+            const key = `${hotelId}_${roomTypeId}`;
+            const roomPrice = roomPrices[key];
+            console.log(`key ${key}`);
+            console.log(roomPrice);
+            if (roomPrice !== undefined && diferentDate>0) {
+                const totalPrice = roomPrice * diferentDate;
+                document.querySelector("input[name='total']").value = totalPrice.toFixed(2);
+                document.getElementById("total").innerText = totalPrice.toFixed(2);
+            }
+            else {
+                document.querySelector("input[name='total']").value = "0.00";
+                document.getElementById("total").innerText = "0";
+            }
+        }
+
+        // Eventos para actualizar el precio en tiempo real
+        document.getElementById("hotelId").addEventListener("change", calculatePrice);
+        document.getElementById("roomTypeId").addEventListener("change", calculatePrice);
+        document.getElementById("adultTotal").addEventListener("input", calculatePrice);
+        document.getElementById("childTotal").addEventListener("input", calculatePrice);
+        document.getElementById("arrivalDate").addEventListener("input", calculatePrice,);
+        document.getElementById("departureDate").addEventListener("input", calculatePrice);
+    </script>
+
+    <style>
+        .form-control {
+            margin-bottom: 10px;
+        }
+    </style>
+</body>
+</html>
